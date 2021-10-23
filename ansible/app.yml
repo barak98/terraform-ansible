@@ -1,0 +1,56 @@
+
+---
+  - host- hosts: webServers
+    become: yes
+
+    vars:
+      homeDir: /home/barak
+      appDir : bootcamp-app
+      NODEJS_VERSION: "14"
+      ansible_distribution_release: "xenial" #trusty
+
+    tasks:
+    - name: Install the gpg key for nodejs LTS
+      apt_key:
+        url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
+        state: present
+
+    - name: Install the nodejs LTS repos
+      apt_repository:
+        repo: "deb https://deb.nodesource.com/node_{{ NODEJS_VERSION }}.x {{ ansible_distribution_release }} main"
+        state: present
+        update_cache: yes
+
+    - name: Install the nodejs
+      apt:
+        name: nodejs
+        state: present
+
+    - name: Install pm2
+      npm: name=pm2 global=yes production=yes
+    - name: Create APP Directory
+      file: path={{homeDir}}/{{appDir}} state=directory
+
+    - name: Git Clone Repo
+      git: repo="https://github.com/barak98/bootcamp-app.git" dest={{homeDir}}/{{appDir}} update=yes force=yes accept_hostkey=yes
+      register: git_finished
+
+    - name: Running NPM install
+      npm: path={{homeDir}}/{{appDir}}
+      register: npm_finished
+      when: git_finished.changed
+
+    - name: copying file with playbook
+      become_user: root
+      copy: src=/home/barak/test.env dest=/{{homeDir}}/{{appDir}} mode=0777
+
+    - name: Rename test.env to .env
+      command: mv /{{homeDir}}/{{appDir}}/test.env  /{{homeDir}}/{{appDir}}/.env
+
+    - name: Init DB
+      command: chdir={{homeDir}}/{{aooDir}} npm initdb
+
+    - name: Start APP
+    command: pm2 start "npm run dev" --name app chdir={{homeDir}}/{{appDir}}
+    ignore_errors: yes
+    when: npm_finished.changed
