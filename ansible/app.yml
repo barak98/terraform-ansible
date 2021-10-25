@@ -1,10 +1,10 @@
 
 ---
-  - host- hosts: webServers
+  - hosts: webServers
     become: yes
 
     vars:
-      homeDir: /home/barak
+      homeDir: /home/ubuntu
       appDir : bootcamp-app
       NODEJS_VERSION: "14"
       ansible_distribution_release: "xenial" #trusty
@@ -27,7 +27,8 @@
         state: present
 
     - name: Install pm2
-      npm: name=pm2 global=yes production=yes
+      shell: npm install pm2 -g
+
     - name: Create APP Directory
       file: path={{homeDir}}/{{appDir}} state=directory
 
@@ -41,16 +42,36 @@
       when: git_finished.changed
 
     - name: copying file with playbook
-      become_user: root
-      copy: src=/home/barak/test.env dest=/{{homeDir}}/{{appDir}} mode=0777
+      copy:
+        dest: "{{homeDir}}/{{appDir}}/.env"
+        content: 
+         PORT=8080
+         HOST='0.0.0.0'
+         HOST_URL=http://{added manually}:8080
+         COOKIE_ENCRYPT_PWD=superAwesomePasswordStringThatIsAtLeast32CharactersLong!
+         NODE_ENV=development
+         PGHOST={added manually}
+         PGUSERNAME={added manually}
+         PGDATABASE={added manually}
+         PGPASSWORD={added manually}
+         PGPORT=5432
+         OKTA_ORG_URL={added manually}
+         OKTA_CLIENT_ID={added manually}
+         OKTA_CLIENT_SECRET={added manually}
 
-    - name: Rename test.env to .env
-      command: mv /{{homeDir}}/{{appDir}}/test.env  /{{homeDir}}/{{appDir}}/.env
 
     - name: Init DB
-      command: chdir={{homeDir}}/{{aooDir}} npm initdb
+      shell: npm run initdb
+      async: 30
+      poll: 0
+      args:
+        chdir: '/{{homeDir}}/{{appDir}}'
+
+    - name: Clear pm2
+      shell: pm2 delete all
+      ignore_errors: yes
 
     - name: Start APP
-    command: pm2 start "npm run dev" --name app chdir={{homeDir}}/{{appDir}}
-    ignore_errors: yes
-    when: npm_finished.changed
+      shell: pm2 start npm -- run dev && pm2 save && pm2 startup
+      args:
+        chdir: '/{{homeDir}}/{{appDir}}'

@@ -169,7 +169,7 @@ resource "azurerm_network_interface_application_security_group_association" "asg
   ]
 }
 
-# This block creates the application security group association for the db server
+# creates the application security group association for the db server
 resource "azurerm_network_interface_application_security_group_association" "asg_association_db" {
   count                         = var.db_instances
   network_interface_id          = module.vm_db.*.nic_ids[count.index].id
