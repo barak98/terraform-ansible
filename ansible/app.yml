@@ -1,77 +1,77 @@
-
 ---
   - hosts: webServers
     become: yes
+    remote_user: ubuntu
 
     vars:
-      homeDir: /home/ubuntu
-      appDir : bootcamp-app
-      NODEJS_VERSION: "14"
-      ansible_distribution_release: "xenial" #trusty
+       deploy_directory: '/home/ubuntu/bootcamp-app'
 
     tasks:
-    - name: Install the gpg key for nodejs LTS
-      apt_key:
-        url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
-        state: present
+    - name: update ubuntu server
+      shell: apt-get update
 
-    - name: Install the nodejs LTS repos
-      apt_repository:
-        repo: "deb https://deb.nodesource.com/node_{{ NODEJS_VERSION }}.x {{ ansible_distribution_release }} main"
-        state: present
-        update_cache: yes
-
-    - name: Install the nodejs
+    - name: Update nodejs package
+      shell: curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+ 
+    - name: Install nodejs
       apt:
         name: nodejs
         state: present
-
+ 
     - name: Install pm2
       shell: npm install pm2 -g
-
-    - name: Create APP Directory
-      file: path={{homeDir}}/{{appDir}} state=directory
-
+ 
+ 
     - name: Git Clone Repo
-      git: repo="https://github.com/barak98/bootcamp-app.git" dest={{homeDir}}/{{appDir}} update=yes force=yes accept_hostkey=yes
+      git: repo="https://github.com/barak98/bootcamp-app.git" dest={{ deploy_directory }}/ update=yes force=yes accept_hostkey=yes
       register: git_finished
-
+ 
+    - name: Npm initialization
+      shell: npm init -y
+      args:
+        chdir: '{{ deploy_directory }}/'
+ 
+ 
     - name: Running NPM install
-      npm: path={{homeDir}}/{{appDir}}
+      shell: npm install
       register: npm_finished
       when: git_finished.changed
+      args:
+        chdir: '{{ deploy_directory }}/'
 
+    
     - name: copying file with playbook
       copy:
-        dest: "{{homeDir}}/{{appDir}}/.env"
-        content: 
+        dest: '{{ deploy_directory }}/.env'
+        content: |
          PORT=8080
          HOST='0.0.0.0'
-         HOST_URL=http://{added manually}:8080
+         HOST_URL=http://{{added manually}}:8080
          COOKIE_ENCRYPT_PWD=superAwesomePasswordStringThatIsAtLeast32CharactersLong!
          NODE_ENV=development
-         PGHOST={added manually}
-         PGUSERNAME={added manually}
-         PGDATABASE={added manually}
-         PGPASSWORD={added manually}
+         OKTA_ORG_URL={{added manually}}
+         OKTA_CLIENT_ID={{added manually}}
+         OKTA_CLIENT_SECRET={{added manually}}
+         PGHOST={{added manually}}
+         PGUSERNAME={{added manually}}
+         PGDATABASE={{added manually}}
+         PGPASSWORD={{added manually}}
          PGPORT=5432
-         OKTA_ORG_URL={added manually}
-         OKTA_CLIENT_ID={added manually}
-         OKTA_CLIENT_SECRET={added manually}
 
-
+ 
+ 
     - name: Init DB
       shell: npm run initdb
       async: 30
       poll: 0
       args:
-        chdir: '/{{homeDir}}/{{appDir}}'
-
+        chdir: '{{ deploy_directory }}/'
+ 
     - name: Clear pm2
       shell: pm2 delete all
       ignore_errors: yes
-
+ 
     - name: Start APP
-      shell: pm2 start npm -- run dev && pm2 save && pm2 startup
+      shell: pm2 start npm -- run dev pm2 save && pm2 startup
       args:
-        chdir: '/{{homeDir}}/{{appDir}}'
+        chdir: '{{ deploy_directory }}/'

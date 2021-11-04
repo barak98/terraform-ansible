@@ -28,11 +28,6 @@ variable "subnet_name_public" {
   description = "Public subnet name in Azure"
 }
 
-# Defines a variable for the private subnet name
-variable "subnet_name_private" {
-  type        = string
-  description = "Private subnet name in Azure"
-}
 
 # Defines a variable for the public subnet prefix
 variable "app_address_prefix" {
@@ -40,11 +35,6 @@ variable "app_address_prefix" {
   description = "App address prefixes"
 }
 
-# Defines a variable for the private subnet prefix
-variable "db_address_prefix" {
-  type        = string
-  description = "Db address prefixes"
-}
 
 # Defines a variable for the public IP name
 variable "public_ip_name" {
@@ -73,14 +63,6 @@ variable "nic_app_association_instances" {
   type = number
 }
 
-variable "nic_db_association_instances" {
-  type = number
-}
-
-variable "nic_name_db" {
-  type        = string
-  description = "NIC name for db in Azure"
-}
 
 # Defines a variable for the load balancer name
 variable "lb_name" {
@@ -117,10 +99,6 @@ variable "app_instances" {
   description = "Number of web instances"
 }
 
-variable "db_instances" {
-  type        = number
-  description = "Number of db instances"
-}
 
 # Defines a variable for administrator username
 variable "admin_username" {

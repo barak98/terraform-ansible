@@ -15,16 +15,7 @@ resource "azurerm_virtual_network" "vnet" {
   ]
 }
 
-# Create  private Subnet
-resource "azurerm_subnet" "snet_priv" {
-  name                 = var.subnet_name_private
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = [var.db_address_prefix]
-  depends_on = [
-    azurerm_virtual_network.vnet
-  ]
-}
+
 
 # Create  Public Subnet
 resource "azurerm_subnet" "snet_pub" {
@@ -53,29 +44,6 @@ resource "azurerm_network_security_group" "nsg" {
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
-  security_rule {
-    name                                       = "AllowInboundAppToDB"
-    priority                                   = 150
-    direction                                  = "Inbound"
-    access                                     = "Allow"
-    protocol                                   = "Tcp"
-    source_port_range                          = "*"
-    destination_port_ranges                    = ["5432", "22"]
-    source_application_security_group_ids      = [azurerm_application_security_group.asg-public.id]
-    destination_application_security_group_ids = [azurerm_application_security_group.asg-private.id]
-  }
-
-    security_rule {
-    name                                       = "AllowInboundDBToApp"
-    priority                                   = 160
-    direction                                  = "Inbound"
-    access                                     = "Allow"
-    protocol                                   = "Tcp"
-    source_port_range                          = "*"
-    destination_port_ranges                    = ["8080", "22"]
-    source_application_security_group_ids      = [azurerm_application_security_group.asg-private.id]
-    destination_application_security_group_ids = [azurerm_application_security_group.asg-public.id]
-  }
 
   security_rule {
     name                                       = "AllowAllInbound"
@@ -98,7 +66,7 @@ resource "azurerm_network_security_group" "nsg" {
     source_port_range                          = "*"
     destination_port_ranges                    = ["8080", "22"]
     source_address_prefixes                    = module.vm_app.*.nic_ids_ip_config
-    destination_application_security_group_ids = [azurerm_application_security_group.asg-public.id, azurerm_application_security_group.asg-private.id]
+    destination_application_security_group_ids = [azurerm_application_security_group.asg-public.id]
   }
 
   security_rule {
@@ -110,7 +78,7 @@ resource "azurerm_network_security_group" "nsg" {
     source_port_range                          = "*"
     destination_port_ranges                    = ["8080", "22"]
     source_address_prefix                      = var.admin_ip_address
-    destination_application_security_group_ids = [azurerm_application_security_group.asg-public.id, azurerm_application_security_group.asg-private.id]
+    destination_application_security_group_ids = [azurerm_application_security_group.asg-public.id]
   }
 
   security_rule {
@@ -125,18 +93,6 @@ resource "azurerm_network_security_group" "nsg" {
     destination_application_security_group_ids = [azurerm_application_security_group.asg-public.id]
   }
 
-  security_rule {
-    name                                       = "DenyAllInbound"
-    priority                                   = 550
-    direction                                  = "Inbound"
-    access                                     = "Deny"
-    protocol                                   = "*"
-    source_port_range                          = "*"
-    destination_port_range                     = "*"
-    source_address_prefix                      = "*"
-    destination_application_security_group_ids = [azurerm_application_security_group.asg-private.id]
-  }
-
 }
 
 # This block creates the application security group for the app web servers
@@ -149,15 +105,6 @@ resource "azurerm_application_security_group" "asg-public" {
   ]
 }
 
-# This block creates the application security group for the db server
-resource "azurerm_application_security_group" "asg-private" {
-  name                = "private-asg"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  depends_on = [
-    azurerm_resource_group.rg
-  ]
-}
 
 # This block creates the application security group association for the app web servers
 resource "azurerm_network_interface_application_security_group_association" "asg_association_app" {
@@ -169,15 +116,7 @@ resource "azurerm_network_interface_application_security_group_association" "asg
   ]
 }
 
-# creates the application security group association for the db server
-resource "azurerm_network_interface_application_security_group_association" "asg_association_db" {
-  count                         = var.db_instances
-  network_interface_id          = module.vm_db.*.nic_ids[count.index].id
-  application_security_group_id = azurerm_application_security_group.asg-private.id
-  depends_on = [
-    azurerm_resource_group.rg
-  ]
-}
+
 
 # Create Public Load Balancer
 resource "azurerm_lb" "public_lb" {
@@ -228,12 +167,7 @@ resource "azurerm_network_interface_security_group_association" "nic-association
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
-# Associate NIC (db) with NSG 
-resource "azurerm_network_interface_security_group_association" "nic-association-db-nsg" {
-  count                     = var.nic_db_association_instances
-  network_interface_id      = module.vm_db.*.nic_ids[count.index].id
-  network_security_group_id = azurerm_network_security_group.nsg.id
-}
+
 
 # Associate NIC with backend pool 
 resource "azurerm_network_interface_backend_address_pool_association" "nic-backend-pool-association" {
@@ -278,25 +212,5 @@ module "vm_app" {
   ]
 }
 
-# Create Virtual Machines for DB 
-module "vm_db" {
-  source = "./modules/vm"
 
-  count               = var.db_instances
-  index               = count.index
-  vm_type             = "db"
-  vm_name             = "${var.vm_name}-${count.index}"
-  vm_size             = var.vm_size
-  location            = var.location
-  snet_id             = azurerm_subnet.snet_priv.id
-  avset_id            = azurerm_availability_set.avset.id
-  admin_username      = var.admin_username
-  admin_password      = var.admin_password
-  resource_group_name = var.resource_group_name
-  vnet_name           = var.vnet_name
-
-  depends_on = [
-    azurerm_virtual_network.vnet
-  ]
-}
 
