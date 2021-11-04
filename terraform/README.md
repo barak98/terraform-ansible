@@ -1,4 +1,4 @@
-#### Terraform
+# Terraform
 ### IaC (Infrastructure as code)
 ## The infrastructure here is making virtual machins (Vm) that are all are on the same virtual network
 ## All the vms are connected to a load balancer to try and make every vm dosent get too much treffic and it is balanced so the site wont crash on the user
