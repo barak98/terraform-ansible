@@ -8,4 +8,4 @@
 
 
 ## 
-! [visualizer](https://github.com/barak98/terraform-ansible/blob/main/terraform/Weight_tracker_Infrastructure.png)
+![visualizer](https://github.com/barak98/terraform-ansible/blob/main/terraform/Weight_tracker_Infrastructure.png)
