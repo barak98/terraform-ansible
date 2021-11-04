@@ -8,4 +8,4 @@
 
 
 ## 
-! [visualizer](Weight_tracker_Infrastructure.png)
+! [visualizer] (Weight_tracker_Infrastructure.png)
