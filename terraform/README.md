@@ -7,5 +7,5 @@
 ### The vms themself have a moudle for creating them and based on the amount of vm that is set in the variables are being crated and added to the Virtual network
 
 
-## 
-![visualizer](https://github.com/barak98/terraform-ansible/blob/main/terraform/Weight_tracker_Infrastructure.png)
+## An exmple of how the infrastructure looks
+![visualizer](Weight_tracker_Infrastructure.png)
